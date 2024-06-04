@@ -6,132 +6,96 @@
 ## Introdução
 Este é nosso projeto em c++ com arduino em que visamos solucionar o problema de falta e dificuldade a acesso e informação sobre as águas do oceano. O projeto foi originalmente feito do Wokwi, junto com a simulação. Para ver a simulação entre no link: https://wokwi.com/projects/399793052773957633
 
-## 1- Array de dados:
-No inicio do projeto temos 3 arrays que tem informações que serão exibidas para o usuário conforme a nessecidades passadas nas funções, as listas contem as orientações para os devidos tratamentos de água
-
-```md
-infos = ['ph', 'temp', 'sal']
-tratbaixo = ['utilize um elevador de ph na área', 'Retirar a vida marinha da área enquanto limpa os residuos de lixo na superficie da água', 'Adicione uma solução salina na água']
-tratalto = ['use a adição de um ácido fraco ou de um ácido forte diluído na água','Analise as correntes de água da área de acordo com a época do ano','adicione água salina magnetizada na área analisada']
-```
-
-## 2- Função inicial:
-Ao rodar o código, a primeira coisa que aparecera para o usuario é uma mensagem de boas vindas e logo em sequência, chamará a função 'analisaragua'
-
-```md
-print('Bem-vindo ao WaterStats!')
-analisaragua()
-```
-
-Nela, pediremos informações sobre a água através de inputs e chamaremos a função para verificar se a resposta é um número
+## 1- Definições:
+A primeira coisa que fizemos no código foi chamar as bibliotecas da LiquidCristal e DHT para utilizar a tela lcd e o sensor dht22 respectivamente
 > **Note**
-> A variavel que guarda a resposta do user é passada como parametro
+> As bibliotecas foram instaladas previamente no ambiente de trabalho (no caso, o wokwi)
+Depois definimos a porta de entrada do dht e o tipo dele, no caso dht22. Por ultimo declaramos as váriaveis que serão usadas para o sensor de luz ldr
 
 ```md
-def analisaragua ():
-    ph = input('Digite o ph da água: ')
-    novoph = verificarnum(ph)
-    temp = input('Digite a temperatura da água(Celcius): ')
-    novotemp = verificarnum(temp)
-    sal = input('Digite a salinidade da água(grama/litro): ')
-    novosal = verificarnum(sal)
+#include <LiquidCrystal.h>
+#include <DHT.h>
+LiquidCrystal lcd(12,11,5,4,3,2);
+
+#define DHTPIN 7
+#define DHTTYPE DHT22
+DHT dht(DHTPIN, DHTTYPE);
+
+int foto = A0;
+float luz = 0;
 ```
 
-A função que verifica se a resposta é um número é feita por um loop while que só é satisfeito caso a resposta seja númerica
+## 2- Setup:
+Em nosso void setup iniciamos o lcd e o dht, e colocamos a variavel foto (que se refere ao ldr na porta A0) e "ligamos" ele como INPUT
+> **Note**
+> INPUT se refere a entrada de informação
 
 ```md
-def verificarnum(numero):
-    while not numero.isnumeric():
-        numero = input('Diga um numero valido: ')
-    return int(numero)
+void setup(){
+lcd.begin(16,2);
+lcd.setCursor(4,1);
+dht.begin();
+pinMode(foto, INPUT);
+}
 ```
 
 ## 3- Verificando as váriaveis:
-Na função 'analisaragua' nós passamos as respostas como parametro para uma outra função
+Dentro do void loop iremos usar as informações providas pelos sensores para passar pelos parametros normais da água, assim podemos compara o valor das variaveis com as codiçoes dos 'if' para mostrar para o usuário a qualidade da água (podendo ser 'bom', 'ok' e 'ruim')
 
 ```md
-    aguaverificada = verificaragua(novoph, novotemp, novosal)
+    void loop(){
+float temp = dht.readTemperature();
+String tempquali = "ok";
+
+luz = analogRead(A0);
+
+String luzquali = "ok";
+
+if (temp >= 19 || temp <=2){
+  tempquali = "Ruim";
+} else if (temp <= 5 || temp >= 15){
+  tempquali = "Ok";
+} else{
+  tempquali = "Bom";
+}
+
+if (luz >= 640 || luz <= 220){
+  luzquali = "Ruim";
+} else if (luz >= 500 || luz <= 350){
+  luzquali = "Ok";
+} else{
+  luzquali = "Bom";
+}
 ```
 
-essa função é responsavel para verificar se os padrões da água estão bons, altos, ou baixos, passando por uma série de 'if' e no fim mostrando os resultados para o usuário por meio de um 'print'
+## 4- Apresentação no lcd
+Para finalizar o void loop, configuramos o lcd para mostrar um pequeno texto (como temp e luz), Adicionamos o valor providos pelos sensores, e por fim passamos o nivel de qualidade obtido ao passar pelas codicionais de 'if'
 
 ```md
-def verificaragua(ph,temp,sal):
-    nivelph = ''
-    niveltemp = ''
-    nivelsal = ''
-    if ph >= 7 and ph <= 9:
-        nivelph = 'bom'
-    elif ph < 7:
-        nivelph = 'baixo'
-    else:
-        nivelph = 'alto'
+lcd.setCursor(0,0);
+lcd.print("Temp: ");
+lcd.print(dht.readTemperature(), 0);
+lcd.print("C ");
+lcd.print(tempquali);
 
-    if temp >= 5 and temp <= 15:
-        niveltemp = 'bom'
-    elif temp < 5:
-        niveltemp = 'baixo'
-    else:
-        niveltemp = 'alto'
+lcd.setCursor(0,1);
+lcd.print("Luz: ");
+lcd.print(luz);
+lcd.print(" ");
+lcd.print(luzquali);
 
-    if sal >= 30 and sal <= 40:
-        nivelsal = 'bom'
-    elif sal < 30:
-        nivelsal = 'baixo'
-    else:
-        nivelsal = 'alto'
+luz = analogRead(A0);
 
-    print(f'Detalhes da água:\n - PH: {ph}, nivel: {nivelph}\n - Temperatura: {temp}°C, nivel: {niveltemp}\n - Salinidade: {sal} gramas/litro, nivel: {nivelsal}')
+delay(500);
 
-    return [nivelph, niveltemp, nivelsal]
+lcd.clear();
+}
 ```
-e retornando uma lista com os valores do niveis da água
+> **Note**
+> Os setCursor servem para dizer em qual parte do lcd eles devem aparecer, por exemplo, o lcd.setCursor(0,0) mostra o texto na primeira coluna e na primeira linha
 
-## 4- Tratamento
-Na função de 'analisaragua' perguntamos se o user quer ver as orientações, e verificamos se a resposta foi sim ou não usando uma nova função com a mesma lógica do 'verificarnum'. E caso a resposta seja 'sim', chamamos a função para tratar a água
+Após um delay o lcd é limpo e o loop recomeça
 
-```md
- orientacoes = input('Você quer ver as orientações sobre como tratar a água?(Diga "sim" ou "não"): ')
-    resposta = verificarsimounao(orientacoes)
-
-    if resposta == 'sim':
-        tratamento(aguaverificada)
-```
-```md
-def verificarsimounao(res):
-    while not (res == 'sim' or res == 'não'):
-        res = input('Diga "sim" ou "não": ')
-    return res
-```
-
-Na função do tratamento temos um loop for, que passa por todos os itens da lista de niveis da água retornada anteriormente, e verificando se os niveis estão baixos ou altos
-
-```md
-def tratamento (lista):
-    for i in range(len(lista)):
-        if lista[i] == 'baixo':
-            print(f'tratamento de {infos[i]} ({lista[i]}) \n - Orientação: {tratbaixo[i]} ')
-        elif lista[i] == 'alto':
-            print(f'tratamento de {infos[i]} ({lista[i]}) \n - Orientação: {tratalto[i]} ')
-    return
-```
-
-Caso o nivel entre em alguma das condições, será passada uma mensagem explicando o que fazer nesta situação, as informações da mesangem são pegas de acordo com o indice da lista, nivel do indice, e dados das arrays passsadas no inicio do código
-
-## 5- Finalização
-Após passar o tratamento da água, perguntamos ao user na função 'analisaragua' se ele gostaria de repetir o processo com uma nova água, caso diga 'sim', o código se repetira
-
-```md
-repetir = input('Você quer analisar outra água?(Diga "sim" ou "não"): ')
-    repeticao = verificarsimounao(repetir)
-
-    if repeticao == 'sim':
-        analisaragua()
-```
-e após isto, damos uma pequena mensagem de adeus, e terminamos o código
-```md
-print('Até mais')
-```
 
 INTEGRANTES:
 - Luiz Fernando Souza RM: 555561
